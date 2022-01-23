@@ -55,9 +55,10 @@ class FRN(nn.Module):
     
 
     def get_recon_dist(self,query,support,alpha,beta,Woodbury=True):
-    # query: way*query_shot*resolution, d    // no. of query images = way*query_shot ,image shape = resolution*d
-    # support: way, shot*resolution , d // no. of images = way*shot , image shape = resolution*d
+    # query: way*query_shot*d, resolution    // no. of query images = way*query_shot ,image shape = resolution*d
+    # support: way, shot*d , resolution // no. of images = way*shot , image shape = resolution*d
     # Woodbury: whether to use the Woodbury Identity as the implementation or not
+    # complexity consideration: way = 5, shot<=5, d = 640, resolution = 25
 
         # correspond to kr/d in the paper
         reg = support.size(1)/support.size(2)
@@ -68,27 +69,39 @@ class FRN(nn.Module):
         # correspond to gamma in the paper
         rho = beta.exp()
 
-        st = support.permute(0,2,1) # way,shot*resolution,d  => way,d,shot*resolution
+        st = support.permute(0,2,1) # way, shot*d , resolution  => way,resolution,shot*d
 
         if Woodbury:
             # correspond to Equation 10 in the paper
-            
-            sts = st.matmul(support) # way, d, d
-            m_inv = (sts+torch.eye(sts.size(-1)).to(sts.device).unsqueeze(0).mul(lam)).inverse() # way, d, d
-            hat = m_inv.matmul(sts) # way, d, d
+
+            # no. operations = shot*d * shot*d   instead of shot*resolution * shot*resolution
+            sts = st.matmul(support) # way, resolution, resolution
+
+            # For inverse: no. operations =  resolution^3  instead of d^3 with original method
+            m_inv = (sts+torch.eye(sts.size(-1)).to(sts.device).unsqueeze(0).mul(lam)).inverse() # way, resolution, resolution
+
+            # no. operations = resolution^2 instead of d^2
+            hat = m_inv.matmul(sts) # way, resolution, resolution
         
         else:
             # correspond to Equation 8 in the paper
 
             # sst => Sc * St
-            sst = support.matmul(st) # way, shot*resolution, shot*resolution
-            m_inv = (sst+torch.eye(sst.size(-1)).to(sst.device).unsqueeze(0).mul(lam)).inverse() # way, shot*resolution, shot*resolutionsf 
-            hat = st.matmul(m_inv).matmul(support) # way, d, d
+            # no. operation = resolution^2 instead of d^2
+            sst = support.matmul(st) # way, shot*d, shot*d
 
-        # why is rho multiplied later? shouldn't it be in the left side? ?????
-        Q_bar = query.matmul(hat).mul(rho) # way, way*query_shot*resolution, d
+            # no. operation = (shot*d)^3 instead of (shot*resolution)^3
+            m_inv = (sst+torch.eye(sst.size(-1)).to(sst.device).unsqueeze(0).mul(lam)).inverse() # way, shot*d, shot*d
 
-        dist = (Q_bar-query.unsqueeze(0)).pow(2).sum(2).permute(1,0) # way*query_shot*resolution, way
+            # no. operation = resolution^2 instead of d^2
+            hat = st.matmul(m_inv).matmul(support) # way, resolution, resolution
+
+
+        # no. operations = resolution * resolution instead of d*d
+        Q_bar = query.matmul(hat).mul(rho) # way, way*query_shot*d, resolution
+
+        # num operations = same as before (Frobenius norm depends only on total number of elements)
+        dist = (Q_bar-query.unsqueeze(0)).pow(2).sum(2).permute(1,0) # way*query_shot*d, way
         
         return dist
 
@@ -104,12 +117,19 @@ class FRN(nn.Module):
         # it contains both the support and query processed feature maps.
         feature_map = self.get_feature_map(inp)
 
-        support = feature_map[:way*shot].view(way, shot*resolution , d)
-        query = feature_map[way*shot:].view(way*query_shot*resolution, d)
+        support = feature_map[:way*shot].view(way, shot,resolution , d)
+        query = feature_map[way*shot:].view(way*query_shot,resolution, d)
 
-        recon_dist = self.get_recon_dist(query=query,support=support,alpha=alpha,beta=beta) # way*query_shot*resolution, way
+        support_transpose = support.permute(0,1,3,2).view(way,shot*d,resolution)
+        query_transpose = query.permute(0,2,1).view(way*query_shot*d,resolution)
+
+
+        # recon_dist = self.get_recon_dist(query=query,support=support,alpha=alpha,beta=beta) # way*query_shot*resolution, way
+        # neg_l2_dist = recon_dist.neg().view(way*query_shot,resolution,way).mean(1) # way*query_shot, way
+
+        recon_dist = self.get_recon_dist(query=query_transpose,support=support_transpose,alpha=alpha,beta=beta) # way*query_shot*resolution, way
         neg_l2_dist = recon_dist.neg().view(way*query_shot,resolution,way).mean(1) # way*query_shot, way
-        
+
         if return_support:
             return neg_l2_dist, support
         else:
