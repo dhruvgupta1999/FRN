@@ -32,6 +32,7 @@ def meta_test(data_path,model,way,shot,pre,transform_type,query_shot=16,trial=10
 
     for i, (inp,_) in tqdm(enumerate(eval_loader)):
 
+        # inp format: (way*shot) + (way*query_shot) , first (way*shot) are support images, the rest (way*query_shot) are query
         inp = inp.cuda()
         max_index = model.meta_test(inp,way=way,shot=shot,query_shot=query_shot)
 

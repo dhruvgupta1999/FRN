@@ -36,6 +36,7 @@ def meta_test_dataloader(data_path,way,shot,pre,transform_type=None,query_shot=1
 
     dataset = get_dataset(data_path=data_path,is_training=False,transform_type=transform_type,pre=pre)
 
+    # loads data based on some sampler
     loader = torch.utils.data.DataLoader(
         dataset,
         batch_sampler = samplers.random_sampler(data_source=dataset,way=way,shot=shot,query_shot=query_shot,trial=trial),

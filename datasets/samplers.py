@@ -79,19 +79,23 @@ class random_sampler(Sampler):
         class2id = deepcopy(self.class2id)        
         list_class_id = list(class2id.keys())
 
+
+        # this id_list is return at every iteration of tqdm(iterate) (I believe)
+        # id_list format: (way*shot) + (way*query_shot)  , first (way*shot) are support images, the rest are query
+
         for i in range(trial):
 
             id_list = []
  
             np.random.shuffle(list_class_id)
-            picked_class = list_class_id[:way]
+            picked_class = list_class_id[:way] # way number of classes have been picked
 
             for cat in picked_class:
-                np.random.shuffle(class2id[cat])
+                np.random.shuffle(class2id[cat]) # all image_id are shuffled so random images are selected in support and query
                 
             for cat in picked_class:
-                id_list.extend(class2id[cat][:shot])
+                id_list.extend(class2id[cat][:shot]) # all classes support set indexes first
             for cat in picked_class:
-                id_list.extend(class2id[cat][shot:(shot+query_shot)])
+                id_list.extend(class2id[cat][shot:(shot+query_shot)]) # then all query set indexes are appended
 
             yield id_list

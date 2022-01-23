@@ -55,8 +55,8 @@ class FRN(nn.Module):
     
 
     def get_recon_dist(self,query,support,alpha,beta,Woodbury=True):
-    # query: way*query_shot*resolution, d
-    # support: way, shot*resolution , d
+    # query: way*query_shot*resolution, d    // no. of query images = way*query_shot ,image shape = resolution*d
+    # support: way, shot*resolution , d // no. of images = way*shot , image shape = resolution*d
     # Woodbury: whether to use the Woodbury Identity as the implementation or not
 
         # correspond to kr/d in the paper
@@ -68,7 +68,7 @@ class FRN(nn.Module):
         # correspond to gamma in the paper
         rho = beta.exp()
 
-        st = support.permute(0,2,1) # way, d, shot*resolution
+        st = support.permute(0,2,1) # way,shot*resolution,d  => way,d,shot*resolution
 
         if Woodbury:
             # correspond to Equation 10 in the paper
@@ -79,11 +79,13 @@ class FRN(nn.Module):
         
         else:
             # correspond to Equation 8 in the paper
-            
+
+            # sst => Sc * St
             sst = support.matmul(st) # way, shot*resolution, shot*resolution
             m_inv = (sst+torch.eye(sst.size(-1)).to(sst.device).unsqueeze(0).mul(lam)).inverse() # way, shot*resolution, shot*resolutionsf 
             hat = st.matmul(m_inv).matmul(support) # way, d, d
 
+        # why is rho multiplied later? shouldn't it be in the left side? ?????
         Q_bar = query.matmul(hat).mul(rho) # way, way*query_shot*resolution, d
 
         dist = (Q_bar-query.unsqueeze(0)).pow(2).sum(2).permute(1,0) # way*query_shot*resolution, way
@@ -98,6 +100,8 @@ class FRN(nn.Module):
         alpha = self.r[0]
         beta = self.r[1]
 
+        # feature map has way number of classes,each class has shot+query_shot no. of images
+        # it contains both the support and query processed feature maps.
         feature_map = self.get_feature_map(inp)
 
         support = feature_map[:way*shot].view(way, shot*resolution , d)
