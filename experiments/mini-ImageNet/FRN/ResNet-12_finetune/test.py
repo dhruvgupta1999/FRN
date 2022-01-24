@@ -13,7 +13,7 @@ with open('../../../../config.yml', 'r') as f:
 data_path = os.path.abspath(temp['data_path'])
 
 test_path = os.path.join(data_path,'mini-ImageNet/test_pre')
-model_path = './model_ResNet-12.pth'
+model_path = '/home/dhruv.gupta.cse17.iitbhu/FRN_trained_model/mini-ImageNet/FRN/ResNet-12_finetune/model.pth'
 #model_path = '../../../../trained_model_weights/mini-ImageNet/FRN/ResNet-12_finetune/model.pth'
 
 gpu = 0
