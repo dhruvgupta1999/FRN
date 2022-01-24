@@ -127,8 +127,8 @@ class FRN(nn.Module):
         # recon_dist = self.get_recon_dist(query=query,support=support,alpha=alpha,beta=beta) # way*query_shot*resolution, way
         # neg_l2_dist = recon_dist.neg().view(way*query_shot,resolution,way).mean(1) # way*query_shot, way
 
-        recon_dist = self.get_recon_dist(query=query_transpose,support=support_transpose,alpha=alpha,beta=beta) # way*query_shot*resolution, way
-        neg_l2_dist = recon_dist.neg().view(way*query_shot,resolution,way).mean(1) # way*query_shot, way
+        recon_dist = self.get_recon_dist(query=query_transpose,support=support_transpose,alpha=alpha,beta=beta) # way*query_shot*d, way
+        neg_l2_dist = recon_dist.neg().view(way*query_shot,d,way).mean(1) # way*query_shot, way
 
         if return_support:
             return neg_l2_dist, support
