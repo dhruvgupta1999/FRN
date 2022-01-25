@@ -2,13 +2,13 @@ import sys
 import os
 import torch
 import yaml
-sys.path.append('../../../../')
+# sys.path.append('../../../../')
 from models.FRN import FRN
 from utils import util
 from trainers.eval import meta_test
 
 
-with open('../../../../config.yml', 'r') as f:
+with open('/home/idd2017/cse/17074006/FRN/config.yml', 'r') as f:
     temp = yaml.safe_load(f)
 data_path = os.path.abspath(temp['data_path'])
 
