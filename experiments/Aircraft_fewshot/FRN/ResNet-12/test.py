@@ -2,7 +2,7 @@ import sys
 import os
 import torch
 import yaml
-sys.path.append('../../../../')
+sys.path.append('/home/idd2017/cse/17074006/FRN')
 from models.FRN import FRN
 from utils import util
 from trainers.eval import meta_test
