@@ -2,7 +2,7 @@ import sys
 import os
 import torch
 import yaml
-sys.path.append('/home/idd2017/cse/17074006/FRN/')
+sys.path.insert(0,'/home/idd2017/cse/17074006/FRN/')
 print(sys.path)
 from models.FRN import FRN
 from utils import util
